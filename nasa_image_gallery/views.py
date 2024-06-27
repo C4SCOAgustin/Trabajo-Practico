@@ -1,7 +1,10 @@
 # capa de vista/presentación
 # si se necesita algún dato (lista, valor, etc), esta capa SIEMPRE se comunica con services_nasa_image_gallery.py
 
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
+
+from nasa_image_gallery.layers.generic.mapper import fromTemplateIntoNASACard
 from .layers.services import services_nasa_image_gallery
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -41,18 +44,36 @@ def search(request):
 # las siguientes funciones se utilizan para implementar la sección de favoritos: traer los favoritos de un usuario, guardarlos, eliminarlos y desloguearse de la app.
 @login_required
 def getAllFavouritesByUser(request):
-    favourite_list = []
+    if not request.user.is_authenticated:
+        return redirect('login')
+    favourite_list = services_nasa_image_gallery.getAllFavouritesByUser(request.user)
     return render(request, 'favourites.html', {'favourite_list': favourite_list})
 
 
 @login_required
 def saveFavourite(request):
-    pass
+    if request.method == 'POST':
+        nasa_card=fromTemplateIntoNASACard(request)
+        nasa_card.user=request.user
+        saved=services_nasa_image_gallery.saveFavourite(nasa_card)
+        if saved:
+            return HttpResponse('favorito guardado correctamente')
+        else:
+            return HttpResponse('error al guardar favorito')
+    else:
+        return redirect('home')
+        
 
 
 @login_required
 def deleteFavourite(request):
-    pass
+    if request.method == 'POST':
+        fav_id=request.POST.get('id')
+        deleted=services_nasa_image_gallery.deleteFavourite(fav_id)
+        if deleted:
+            return HttpResponse('favorito eliminado correctamente')
+        else:
+            return HttpResponse('error al eliminar favorito')
 
 
 @login_required
